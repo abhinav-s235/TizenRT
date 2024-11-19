@@ -115,7 +115,15 @@ ifeq ($(CONFIG_LCD_ST7701SN),y)
   CSRCS += mipi_lcd.c
 endif
 
+ifeq ($(CONFIG_LCD_XRES),480)
+ifeq ($(CONFIG_LCD_YRES),800)
+CSRCS += lcd_logo_800_480.c
+endif
+endif
+
 endif # CONFIG_LCD
+
+# Include LCD driver build support (the nested if-then-else implements an OR)
 
 ifeq ($(CONFIG_LCD),y)
   DEPPATH += --dep-path lcd

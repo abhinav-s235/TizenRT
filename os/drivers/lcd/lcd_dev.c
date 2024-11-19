@@ -419,7 +419,7 @@ int lcddev_register(struct lcd_dev_s *dev)
 		lcddbg("ERROR: Failed to allocate memory for LCD flush swap buffer\n");
 		return -ENOMEM;
 	}
-
+	lcd_set_logo(dev);
 	int pid = kernel_thread("LCD Frame flusing", 204, 8192, lcd_flushing_thread, NULL);
 	if (pid < 0) {
 		lcddbg("ERROR: Failed to start LCD Frame Flusing thread\n");

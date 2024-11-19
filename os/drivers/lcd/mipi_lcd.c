@@ -38,11 +38,16 @@
 #define CONFIG_LCD_MAXPOWER 100
 #endif
 
+extern int LCD_LOGO_LOCATION;
+extern int LCD_LOGO_YRES;
+extern int LCD_LOGO_XRES;
+extern int lcd_logo_data[];
+static uint8_t *lcd_data_logo = NULL;
+
 #if defined(CONFIG_LCD_SW_ROTATION)
 #define NUM_OF_LCD_BUFFER	2
 static uint8_t *lcd_buffer[NUM_OF_LCD_BUFFER] = { NULL, NULL };	//Two lcd buffers to avoid screen tearing
 static int lcd_buffer_index = 0;
-
 static void lcd_rotate_buffer(short int* src, short int* dst)
 {
 	int row;
@@ -236,6 +241,10 @@ static int lcd_putarea(FAR struct lcd_dev_s *dev, fb_coord_t row_start, fb_coord
 	priv->config->lcd_put_area((u8 *)lcd_buffer[lcd_buffer_index], row_start, col_start, row_end, col_end);
 	lcd_buffer_index = (1 - lcd_buffer_index);
 #else
+	if (lcd_data_logo != NULL) {
+		kmm_free(lcd_data_logo);
+		lcd_data_logo = NULL;
+	}
 	priv->config->lcd_put_area((u8 *)buffer, row_start, col_start, row_end, col_end);
 #endif
 	return OK;
@@ -355,7 +364,7 @@ static int lcd_init(FAR struct lcd_dev_s *dev)
 		lcddbg("ERROR: LCD Init sequence failed\n");
 	}
 	priv->config->init();
-	priv->config->lcd_enable();
+	priv->config->backlight(CONFIG_LCD_MAXPOWER);
 	return OK;
 }
 
@@ -398,6 +407,34 @@ static int lcd_setcontrast(FAR struct lcd_dev_s *dev, unsigned int contrast)
 	return OK;
 }
 
+FAR void lcd_set_logo(FAR struct lcd_dev_s *dev)
+{
+	int logo_arr_index = 0;
+	int lcd_data_index = LCD_LOGO_LOCATION;
+	int lcd_data_col_count = 0;
+	FAR struct mipi_lcd_dev_s *priv = (FAR struct mipi_lcd_dev_s *)dev;
+
+#if !defined(CONFIG_LCD_SW_ROTATION)
+	lcd_data_logo = (uint8_t *)kmm_malloc(CONFIG_LCD_XRES * CONFIG_LCD_YRES * 2 + 1);
+#endif
+	for (int i = 0; i < CONFIG_LCD_XRES * CONFIG_LCD_YRES * 2; i++) {
+		lcd_data_logo[i] = 0;
+	}
+
+	while (logo_arr_index <= (LCD_LOGO_YRES * LCD_LOGO_XRES * 2)) {
+		lcd_data_logo[lcd_data_index] = lcd_logo_data[logo_arr_index++];
+		lcd_data_logo[lcd_data_index + 1] = lcd_logo_data[logo_arr_index++];
+		lcd_data_index += 2;
+		lcd_data_col_count += 1;
+		if (lcd_data_col_count == LCD_LOGO_XRES) {
+			lcd_data_index += ((CONFIG_LCD_XRES - LCD_LOGO_XRES) * 2);
+			lcd_data_col_count = 0;
+		}
+	}
+
+	priv->config->lcd_put_area((u8 *)lcd_data_logo, 1, 1, 480, 800);
+}
+
 FAR struct lcd_dev_s *mipi_lcdinitialize(FAR struct mipi_dsi_device *dsi, struct mipi_lcd_config_s *config)
 {
 	FAR struct mipi_lcd_dev_s *priv = &g_lcdcdev;
@@ -415,6 +452,7 @@ FAR struct lcd_dev_s *mipi_lcdinitialize(FAR struct mipi_dsi_device *dsi, struct
 	} else {
 		lcddbg("ERROR: LCD Init sequence failed\n");
 	}
+	priv->config->init();
 	priv->config->backlight(CONFIG_LCD_MAXPOWER);
 
 #if defined(CONFIG_LCD_SW_ROTATION)
@@ -428,6 +466,7 @@ FAR struct lcd_dev_s *mipi_lcdinitialize(FAR struct mipi_dsi_device *dsi, struct
 		}
 		lcdvdbg("Memory allocated for SW screen rotation, Number of buffers created %d\n", NUM_OF_LCD_BUFFER);
 	}
+	lcd_data_logo = lcd_buffer[0];
 #endif
 	return &priv->dev;
 }
