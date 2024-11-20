@@ -117,7 +117,7 @@ endif
 
 ifeq ($(CONFIG_LCD_XRES),480)
 ifeq ($(CONFIG_LCD_YRES),800)
-CSRCS += lcd_logo_800_480.c
+CSRCS += lcd_logo_340_52.c
 endif
 endif
 

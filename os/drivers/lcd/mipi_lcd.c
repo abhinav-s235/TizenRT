@@ -43,11 +43,11 @@ extern int LCD_LOGO_YRES;
 extern int LCD_LOGO_XRES;
 extern int lcd_logo_data[];
 static uint8_t *lcd_data_logo = NULL;
-
 #if defined(CONFIG_LCD_SW_ROTATION)
 #define NUM_OF_LCD_BUFFER	2
 static uint8_t *lcd_buffer[NUM_OF_LCD_BUFFER] = { NULL, NULL };	//Two lcd buffers to avoid screen tearing
 static int lcd_buffer_index = 0;
+
 static void lcd_rotate_buffer(short int* src, short int* dst)
 {
 	int row;
@@ -470,3 +470,17 @@ FAR struct lcd_dev_s *mipi_lcdinitialize(FAR struct mipi_dsi_device *dsi, struct
 #endif
 	return &priv->dev;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
