@@ -228,7 +228,16 @@ static int touch_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 		return -EINVAL;
 	}
 
-	switch (cmd) {
+	switch (cmd) {		
+#ifdef CONFIG_TOUCH_CALLBACK
+		case TSIOC_SETAPPNOTIFY: {
+			struct touch_set_callback_s *touch_app = (struct touch_set_callback_s *)arg;
+			priv->app_touch_point_buffer = touch_app->touch_points;
+			priv->is_touch_detected = touch_app->is_touch_detected;
+			touchvdbg("App notification callback register is successful\n");
+		}
+		break;
+#endif
 		case TSIOC_DISABLE: {
 			priv->ops->touch_disable(priv);
 		}

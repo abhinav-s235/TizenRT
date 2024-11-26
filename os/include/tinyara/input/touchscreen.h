@@ -85,7 +85,9 @@
 #define TSIOC_GETFREQUENCY   _TSIOC(0x0004)  /* arg: Pointer to uint32_t frequency value */
 #define TSIOC_DISABLE        _TSIOC(0x0005)  /* Disable touch interrupt */
 #define TSIOC_ENABLE         _TSIOC(0x0006)  /* Enable touch interrupt */
-
+#ifdef CONFIG_TOUCH_CALLBACK
+#define TSIOC_SETAPPNOTIFY	 _TSIOC(0x0008)  /* arg: Pointer to struct touch_set_callback_s */
+#endif	/* CONFIG_TOUCH_CALLBACK */
 #define TSC_FIRST            0x0001          /* First common command */
 #define TSC_NCMDS            4               /* Four common commands */
 
@@ -170,6 +172,15 @@ struct touch_sample_s {
 	struct touch_point_s point[TOUCH_MAX_POINTS]; /* Actual dimension is npoints */
 };
 
+#ifdef CONFIG_TOUCH_CALLBACK
+
+struct touch_set_callback_s {
+	struct touch_sample_s *touch_points;
+	void (*is_touch_detected)(int);
+};
+
+#endif /* CONFIG_TOUCH_CALLBACK */
+
 /*
  * This structure is upper level driver operations which will use lower level calls internally
  */
@@ -200,6 +211,11 @@ struct touchscreen_s {
 	const struct touchscreen_ops_s *ops;	/* Arch-specific operations */
 	void *priv;		/* Used by the TSP-specific logic */
 
+#ifdef CONFIG_TOUCH_CALLBACK
+	/* Below variables are set by UI using IOCTL during initialization */
+	struct touch_sample_s *app_touch_point_buffer;		/* Buffer to store touch point allocated by UI */
+	void (*is_touch_detected)(int);	/* Callback function to notify touch event to application */
+#endif /* CONFIG_TOUCH_CALLBACK */
 };
 
 #define SIZEOF_TOUCH_SAMPLE_S(n) (sizeof(struct touch_sample_s) + ((n) - 1) * sizeof(struct touch_point_s))
