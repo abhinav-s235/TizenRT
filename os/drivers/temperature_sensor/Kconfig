@@ -1,0 +1,4 @@
+config TEMPERATURE_SENSOR
+	bool "Temperature Sensor Driver"
+	default n
+	

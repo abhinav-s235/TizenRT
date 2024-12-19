@@ -108,7 +108,6 @@
 #define _MIPIDSIBASE    (0x3900) 	/* Mipidsi device ioctl commands */
 
 
-
 /* boardctl() commands share the same number space */
 #define _BOARDBASE      (0xff00)	/* boardctl commands */
 
@@ -397,6 +396,8 @@
 
 #define _LCDIOCVALID(c)   (_IOC_TYPE(c)==_SLCDIOCBASE)
 #define _LCDIOC(nr)       _IOC(_SLCDIOCBASE,nr)
+
+#define _TEMPS(nr)			_IOC(_TEMPBASE,nr)
 
 #define _MIPIDSIIOC(nr)        _IOC(_MIPIDSIBASE,nr)
 #define _MIPIDSIIOCVALID(c)    (_IOC_TYPE(c)==_MIPIDSIBASE)

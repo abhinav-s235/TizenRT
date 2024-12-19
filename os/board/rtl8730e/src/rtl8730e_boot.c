@@ -457,6 +457,10 @@ void board_initialize(void)
 	rtl8730e_ist415_initialize();
 #endif
 
+#if defined(CONFIG_TEMPERATURE_SENSOR)
+	rtl8730e_sensor_initialize();
+#endif
+
 #ifdef CONFIG_WATCHDOG
 	amebasmart_wdg_initialize(CONFIG_WATCHDOG_DEVPATH, 5000);
 #endif
