@@ -26,3 +26,15 @@ config MEM_LEAK_CHECKER_MAX_ALLOC_COUNT
 		It must be larger than the total number of memory allocations.
 
 endif
+
+config MEM_CAPTURE
+	bool "Memory Capture Utility"
+	default n
+	depends on DEBUG_MM_HEAPINFO
+	---help---
+		Enable memory capture utility with start/stop commands.
+		Captures malloc/free for a specific PID and reports unfreed allocations.
+		
+		Commands:
+		- mem_capture_start <pid>  : Start capturing for PID
+		- mem_capture_stop  <pid>  : Stop and print unfreed allocations

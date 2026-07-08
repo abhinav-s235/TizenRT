@@ -67,6 +67,10 @@ THREADEXEC = TASH_EXECMD_ASYNC
 ASRCS =
 MAINSRC = mem_leak_checker_main.c
 
+ifeq ($(CONFIG_MEM_CAPTURE),y)
+CSRCS += mem_capture.c
+endif
+
 AOBJS = $(ASRCS:.S=$(OBJEXT))
 COBJS = $(CSRCS:.c=$(OBJEXT))
 MAINOBJ = $(MAINSRC:.c=$(OBJEXT))
