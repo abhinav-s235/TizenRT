@@ -69,6 +69,10 @@ CSRCS += mm_heapinfo_group.c
 endif
 endif
 
+ifeq ($(CONFIG_MEM_CAPTURE),y)
+CSRCS += mem_tracker.c
+endif
+
 # Add the core heap directory to the build
 
 DEPPATH += --dep-path mm_heap

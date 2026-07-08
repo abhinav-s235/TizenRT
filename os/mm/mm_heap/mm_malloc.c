@@ -65,6 +65,10 @@
 #endif
 #include <tinyara/arch.h>
 
+#ifdef CONFIG_MEM_CAPTURE
+#include "mem_tracker.h"
+#endif
+
 #include "mm_node.h"
 
 /****************************************************************************
@@ -155,6 +159,9 @@ FAR void *mm_malloc(FAR struct mm_heap_s *heap, size_t size, mmaddress_t caller_
 
 	/* Free the delay list first */
 	mm_free_delaylist(heap);
+
+	/* Save original requested size for tracker */
+	size_t orig_size = size;
 
 	/* Handle bad sizes */
 
@@ -263,6 +270,11 @@ retry_after_gc:
 		heapinfo_update_total_size(heap, node->size, ((struct mm_allocnode_s *)node)->pid);
 #endif
 		ret = (void *)((char *)node + SIZEOF_MM_ALLOCNODE);
+
+#ifdef CONFIG_MEM_CAPTURE
+		/* Pass original requested size */
+		mem_tracker_add_allocation(ret, orig_size, caller_retaddr, node->pid);
+#endif
 	}
 
 	mm_givesemaphore(heap);

@@ -67,6 +67,11 @@
 #endif
 #include <tinyara/arch.h>
 #include <sys/prctl.h>
+
+#ifdef CONFIG_MEM_CAPTURE
+#include "mem_tracker.h"
+#endif
+
 #include "mm_node.h"
 
 /****************************************************************************
@@ -189,6 +194,11 @@ static void mm_free_internal(FAR struct mm_heap_s *heap, FAR void *mem, mmaddres
 	heapinfo_subtract_size(heap, ((struct mm_allocnode_s *)node)->pid, ((struct mm_allocnode_s *)node)->size);
 	heapinfo_update_total_size(heap, ((-1) * ((struct mm_allocnode_s *)node)->size), ((struct mm_allocnode_s *)node)->pid);
 #endif
+
+#ifdef CONFIG_MEM_CAPTURE
+	mem_tracker_mark_freed(mem);
+#endif
+
 	node->preceding &= ~MM_ALLOC_BIT;
 #ifdef CONFIG_DEBUG_MM_FREEINFO
 	/* Record free metadata and quarantine sequence */
