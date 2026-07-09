@@ -161,7 +161,7 @@ FAR void *mm_realloc(FAR struct mm_heap_s *heap, FAR void *oldmem, size_t size, 
 			mm_shrinkchunk(heap, oldnode, newsize);
 #ifdef CONFIG_DEBUG_MM_HEAPINFO
 			/* update the chunk to realloc task information */
-			heapinfo_update_node(oldnode, caller_retaddr);
+			heapinfo_update_node(heap, oldnode, caller_retaddr);
 
 			heapinfo_add_size(heap, oldnode->pid, oldnode->size);
 			heapinfo_update_total_size(heap, oldnode->size, oldnode->pid);
@@ -340,7 +340,7 @@ FAR void *mm_realloc(FAR struct mm_heap_s *heap, FAR void *oldmem, size_t size, 
 		}
 #ifdef CONFIG_DEBUG_MM_HEAPINFO
 		/* update the chunk to realloc task information */
-		heapinfo_update_node(oldnode, caller_retaddr);
+		heapinfo_update_node(heap, oldnode, caller_retaddr);
 
 		heapinfo_add_size(heap, oldnode->pid, oldnode->size);
 		heapinfo_update_total_size(heap, oldnode->size, oldnode->pid);

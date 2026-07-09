@@ -61,6 +61,37 @@
 #include <tinyara/mm/mm.h>
 
 /****************************************************************************
+ * Name: heapinfo_capture_start
+ *
+ * Description:
+ * Arm a heap capture window on the given heap. Allocations made while active
+ * are tagged so that, on stop, blocks allocated during the window and not yet
+ * freed can be listed. pid == HEAPINFO_PID_ALL captures every task's allocs.
+ * The state lives in the heap struct (shared kernel/user memory) so a kernel
+ * ioctl can arm a window that the user-space allocator observes.
+ ****************************************************************************/
+void heapinfo_capture_start(struct mm_heap_s *heap, pid_t pid)
+{
+	DEBUGASSERT(mm_takesemaphore(heap));
+	heap->mm_capture_pid = pid;
+	heap->mm_capture_active = true;
+	mm_givesemaphore(heap);
+}
+
+/****************************************************************************
+ * Name: heapinfo_capture_stop
+ *
+ * Description:
+ * Disarm the heap capture window. Tagged nodes remain marked until reported.
+ ****************************************************************************/
+void heapinfo_capture_stop(struct mm_heap_s *heap)
+{
+	DEBUGASSERT(mm_takesemaphore(heap));
+	heap->mm_capture_active = false;
+	mm_givesemaphore(heap);
+}
+
+/****************************************************************************
  * Name: heapinfo_add_size
  *
  * Description:
@@ -121,12 +152,21 @@ void heapinfo_update_total_size(struct mm_heap_s *heap, mmsize_t size, pid_t pid
  * Description:
  * Adds pid and malloc caller return address to mem chunk
  ****************************************************************************/
-void heapinfo_update_node(FAR struct mm_allocnode_s *node, mmaddress_t caller_retaddr)
+void heapinfo_update_node(FAR struct mm_heap_s *heap, FAR struct mm_allocnode_s *node, mmaddress_t caller_retaddr)
 {
 	DEBUGASSERT(node);
 	node->alloc_call_addr = caller_retaddr;
-	node->memory_state = MM_MEMORY_STATE_UNUSED;
 	node->pid = getpid();
+	/* Tag this allocation if a capture window is active on this heap and the pid
+	 * matches. Blocks freed before the window is stopped are coalesced (they
+	 * lose MM_ALLOC_BIT), so only blocks still allocated at stop time are
+	 * reported. This is always called with the heap semaphore held.
+	 */
+	if (heap->mm_capture_active && (heap->mm_capture_pid == HEAPINFO_PID_ALL || node->pid == heap->mm_capture_pid)) {
+		node->memory_state = MM_MEMORY_STATE_CAPTURED;
+	} else {
+		node->memory_state = MM_MEMORY_STATE_UNUSED;
+	}
 }
 
 /****************************************************************************
@@ -185,7 +225,7 @@ void heapinfo_set_caller_addr(void *address, mmaddress_t caller_retaddr)
 	if (heap) {
 		node = (struct mm_allocnode_s *)((char *)address - SIZEOF_MM_ALLOCNODE);
 		DEBUGASSERT(mm_takesemaphore(heap));
-		heapinfo_update_node(node, caller_retaddr);
+		heapinfo_update_node(heap, node, caller_retaddr);
 		mm_givesemaphore(heap);
 	} else {
 		mdbg("Failed to set caller address, heap not found. addr:%x\n", address);

@@ -263,7 +263,7 @@ retry_after_gc:
 		}
 
 #ifdef CONFIG_DEBUG_MM_HEAPINFO
-		heapinfo_update_node((struct mm_allocnode_s *)node, caller_retaddr);
+		heapinfo_update_node(heap, (struct mm_allocnode_s *)node, caller_retaddr);
 		heapinfo_add_size(heap, ((struct mm_allocnode_s *)node)->pid, node->size);
 		heapinfo_update_total_size(heap, node->size, ((struct mm_allocnode_s *)node)->pid);
 #endif

@@ -183,6 +183,8 @@
 #define HEAPINFO_DETAIL_SPECIFIC_HEAP 5
 #define HEAPINFO_INIT_PEAK 6
 #define HEAPINFO_DUMP_HEAP 7
+#define HEAPINFO_CAPTURE_START 8
+#define HEAPINFO_CAPTURE_STOP 9
 #define HEAPINFO_PID_ALL -1
 
 #define HEAPINFO_INIT_INFO -1
@@ -239,6 +241,7 @@ typedef void *mmaddress_t;             /* 32 bit address space */
 #define MM_MEMORY_STATE_USED     1  /* Memory is referenced */
 #define MM_MEMORY_STATE_LEAK     2  /* Potential memory leak */
 #define MM_MEMORY_STATE_BROKEN   3  /* Heap corruption detected */
+#define MM_MEMORY_STATE_CAPTURED 4  /* Allocated within an active capture window */
 #else
 #define SIZEOF_MM_MALLOC_DEBUG_INFO 0
 #endif
@@ -371,6 +374,13 @@ struct mm_heap_s {
 #ifdef CONFIG_DEBUG_MM_HEAPINFO
 	size_t peak_alloc_size;
 	size_t total_alloc_size;
+	/* Heap capture window state. Stored per-heap (not as a module global) so it
+	 * is shared between the kernel (which arms/reports it via the mminfo ioctl)
+	 * and the allocator (which tags nodes) even in a protected/loadable build
+	 * where the mm code is linked separately into kernel and user binaries.
+	 */
+	bool mm_capture_active;
+	pid_t mm_capture_pid;
 #ifdef CONFIG_HEAPINFO_USER_GROUP
 	int max_group;
 	struct heapinfo_group_s group[HEAPINFO_USER_GROUP_NUM];
@@ -665,7 +675,7 @@ int heap_dbg(const char *fmt, ...);
 /* Functions contained in kmm_mallinfo.c . Used to display memory allocation details */
 void heapinfo_parse_heap(FAR struct mm_heap_s *heap, int mode, pid_t pid);
 /* Funciton to add memory allocation info */
-void heapinfo_update_node(FAR struct mm_allocnode_s *node, mmaddress_t caller_retaddr);
+void heapinfo_update_node(FAR struct mm_heap_s *heap, FAR struct mm_allocnode_s *node, mmaddress_t caller_retaddr);
 void heapinfo_set_caller_addr(void *address, mmaddress_t caller_retaddr);
 void heapinfo_set_pid(void *address, pid_t pid);
 
@@ -677,6 +687,11 @@ void heapinfo_exclude_stacksize(void *stack_ptr);
 void heapinfo_peak_init(struct mm_heap_s *heap);
 void heapinfo_dealloc_tcbinfo(void *address, pid_t pid);
 void heapinfo_dump_heap(struct mm_heap_s *heap);
+/* Heap capture window : report blocks allocated between start and stop that are still not freed */
+void heapinfo_capture_start(struct mm_heap_s *heap, pid_t pid);
+void heapinfo_capture_stop(struct mm_heap_s *heap);
+void heapinfo_capture_reset(struct mm_heap_s *heap);
+void heapinfo_capture_report(struct mm_heap_s *heap, pid_t pid);
 #ifdef CONFIG_HEAPINFO_USER_GROUP
 void heapinfo_update_group(mmsize_t size, pid_t pid);
 void heapinfo_update_group_info(pid_t pid, int group, int type);

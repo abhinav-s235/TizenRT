@@ -320,4 +320,88 @@ void heapinfo_parse_heap(FAR struct mm_heap_s *heap, int mode, pid_t pid)
 #endif
 	return;
 }
+
+/****************************************************************************
+ * Name: heapinfo_capture_reset
+ *
+ * Description:
+ *   Clear any stale MM_MEMORY_STATE_CAPTURED tags in the heap. Called when a
+ *   capture window is (re)started so that tags left over from an aborted
+ *   session do not pollute the next report.
+ ****************************************************************************/
+void heapinfo_capture_reset(FAR struct mm_heap_s *heap)
+{
+	struct mm_allocnode_s *node;
+#if CONFIG_KMM_REGIONS > 1
+	int region;
+#else
+#define region 0
+#endif
+
+#if CONFIG_KMM_REGIONS > 1
+	for (region = 0; region < heap->mm_nregions; region++)
+#endif
+	{
+		DEBUGASSERT(mm_takesemaphore(heap));
+		for (node = heap->mm_heapstart[region]; node < heap->mm_heapend[region]; node = (struct mm_allocnode_s *)((char *)node + node->size)) {
+			if ((node->preceding & MM_ALLOC_BIT) != 0 && node->memory_state == MM_MEMORY_STATE_CAPTURED) {
+				node->memory_state = MM_MEMORY_STATE_UNUSED;
+			}
+		}
+		mm_givesemaphore(heap);
+	}
+#undef region
+}
+
+/****************************************************************************
+ * Name: heapinfo_capture_report
+ *
+ * Description:
+ *   Walk the heap and print every still-allocated block that was tagged during
+ *   the capture window (allocated between start and stop and not yet freed),
+ *   optionally filtered by pid. Stack nodes (negative pid) are skipped. The tag
+ *   is cleared as each captured node is visited so a subsequent stop does not
+ *   re-report it.
+ ****************************************************************************/
+void heapinfo_capture_report(FAR struct mm_heap_s *heap, pid_t pid)
+{
+	struct mm_allocnode_s *node;
+	size_t captured_size = 0;
+	int captured_cnt = 0;
+#if CONFIG_KMM_REGIONS > 1
+	int region;
+#else
+#define region 0
+#endif
+
+	heap_dbg("****************************************************************\n");
+	heap_dbg(" Heap Capture : blocks allocated during window and not yet freed\n");
+	heap_dbg("****************************************************************\n");
+	heap_dbg("  MemAddr |   Size   |  Pid  |    Owner   |\n");
+	heap_dbg("----------|----------|-------|------------|\n");
+
+#if CONFIG_KMM_REGIONS > 1
+	for (region = 0; region < heap->mm_nregions; region++)
+#endif
+	{
+		DEBUGASSERT(mm_takesemaphore(heap));
+		for (node = heap->mm_heapstart[region]; node < heap->mm_heapend[region]; node = (struct mm_allocnode_s *)((char *)node + node->size)) {
+			if ((node->preceding & MM_ALLOC_BIT) != 0 && node->memory_state == MM_MEMORY_STATE_CAPTURED) {
+				/* Skip stack nodes (negative pid); report heap allocations only */
+				if (node->pid >= 0 && (pid == HEAPINFO_PID_ALL || node->pid == pid)) {
+					heap_dbg("0x%x | %8u | %5d | 0x%8x |\n", node, node->size, node->pid, node->alloc_call_addr);
+					captured_size += node->size;
+					captured_cnt++;
+				}
+				/* The window is over : clear the tag regardless of the pid filter */
+				node->memory_state = MM_MEMORY_STATE_UNUSED;
+			}
+		}
+		mm_givesemaphore(heap);
+	}
+#undef region
+
+	heap_dbg("----------------------------------------------\n");
+	heap_dbg(" Captured (still allocated) : %d blocks, %u bytes\n", captured_cnt, captured_size);
+}
 #endif
